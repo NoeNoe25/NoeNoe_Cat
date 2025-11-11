@@ -1,17 +1,19 @@
+# chats.py
 from typing import Any, List
 from datetime import datetime
 from database import database
 
 
-# Insert chat
-async def insert_chat(user_input: str, gemini_reply: str):
+# Insert chat with optional audio path
+async def insert_chat(user_input: str, gemini_reply: str, audio_path: str = None):
     query = """
-    INSERT INTO chats (user_text, bot_reply, created_at)
-    VALUES (:user_text, :bot_reply, :created_at)
+    INSERT INTO chats (user_text, bot_reply, audio_path, created_at)
+    VALUES (:user_text, :bot_reply, :audio_path, :created_at)
     """
     values = {
-        "user_text": user_input,  # Changed to match table column
-        "bot_reply": gemini_reply,  # Changed to match table column
+        "user_text": user_input,
+        "bot_reply": gemini_reply,
+        "audio_path": audio_path,
         "created_at": datetime.utcnow(),
     }
     await database.execute(query=query, values=values)

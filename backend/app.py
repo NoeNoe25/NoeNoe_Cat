@@ -5,6 +5,9 @@ import asyncio
 
 from database import connect_db, disconnect_db, init_db
 from routes.chats import router as chats_router
+from routes.csv_export import router as export_router
+# Comment out PDF export for now
+# from routes.pdf_export import router as pdf_router
 
 from gemini_websocket import start_gemini_websocket
 from vosk_websocket import start_vosk_websocket
@@ -13,15 +16,15 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_methods=["*"],  # Allows all HTTP methods
-    allow_headers=["*"],  # Allows all headers
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app.mount("/recordings", StaticFiles(directory="/recordings"), name="recordings")
 
 app.include_router(chats_router)
-
-
+# app.include_router(pdf_router)  # Comment out for now
+app.include_router(export_router) 
 @app.on_event("startup")
 async def startup():
     # Connect to database
@@ -40,7 +43,6 @@ async def startup():
     print("   - FastAPI: http://localhost:8008")
     print("   - Gemini WebSocket: ws://localhost:8765")
     print("   - Vosk WebSocket: ws://localhost:2700")
-
 
 @app.on_event("shutdown")
 async def shutdown():
