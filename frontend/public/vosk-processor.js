@@ -1,7 +1,7 @@
 // vosk-processor.js
 
 // Silence detection settings - must match the main script for consistency
-const SILENCE_THRESHOLD = 0.003;
+const SILENCE_THRESHOLD = 0.005;
 const RMS_HISTORY_SIZE = 5;
 const SILENCE_DURATION = 2000; // ms (must be managed using counters or time, not duration directly)
 

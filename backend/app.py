@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,12 +6,13 @@ import asyncio
 
 from database import connect_db, disconnect_db, init_db
 from routes.chats import router as chats_router
-from routes.csv_export import router as export_router
-# Comment out PDF export for now
-# from routes.pdf_export import router as pdf_router
+from routes.export import router as export_router
 
 from gemini_websocket import start_gemini_websocket
 from vosk_websocket import start_vosk_websocket
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("--FASTAPI--")
 
 app = FastAPI()
 
@@ -23,8 +25,9 @@ app.add_middleware(
 app.mount("/recordings", StaticFiles(directory="/recordings"), name="recordings")
 
 app.include_router(chats_router)
-# app.include_router(pdf_router)  # Comment out for now
-app.include_router(export_router) 
+app.include_router(export_router)
+
+
 @app.on_event("startup")
 async def startup():
     # Connect to database
@@ -39,10 +42,11 @@ async def startup():
     app.state.gemini_server = gemini_server
     app.state.vosk_server = vosk_server
 
-    print("✅ All servers started:")
-    print("   - FastAPI: http://localhost:8008")
-    print("   - Gemini WebSocket: ws://localhost:8765")
-    print("   - Vosk WebSocket: ws://localhost:2700")
+    logger.info("✅ All servers started:")
+    logger.info("   - FastAPI: http://localhost:8008")
+    logger.info("   - Gemini WebSocket: ws://localhost:8765")
+    logger.info("   - Vosk WebSocket: ws://localhost:2700")
+
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -52,9 +56,9 @@ async def shutdown():
     if hasattr(app.state, "gemini_server"):
         app.state.gemini_server.close()
         await app.state.gemini_server.wait_closed()
-        print("✅ Gemini WebSocket server stopped")
+        logger.info("✅ Gemini WebSocket server stopped")
 
     if hasattr(app.state, "vosk_server"):
         app.state.vosk_server.close()
         await app.state.vosk_server.wait_closed()
-        print("✅ Vosk WebSocket server stopped")
+        logger.info("✅ Vosk WebSocket server stopped")

@@ -1,43 +1,28 @@
 services:
 
-  backend:
+  catgpt_backend:
     build: ./backend
-    container_name: gemini_vosk_backend
+    container_name: catgpt_backend
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     ports:
-      - "8765:8765"
-      - "2700:2700"
-      - "8008:8008"
+      - "8765:8765" # For Gemini API
+      - "2700:2700" # For Vosk API
+      - "8008:8008" # For FastAPI
     volumes:
       - ./backend/models:/app/models
       - ./recordings:/recordings
-    # devices:
-    #   - "/dev/snd:/dev/snd"
-    # group_add:
-    #   - audio
     restart: unless-stopped
 
-  # frontend:
-  #   build: ./frontend
-  #   container_name: node-website
-  #   ports:
-  #     - "3000:3000"
-  #   restart: always
-  #   depends_on:
-  #     - backend
-  #     - postgresql
-
-  react-website:
-    build: ./catgpt-react
-    container_name: catgpt-react
+  catgpt_frontend:
+    build: ./frontend
+    container_name: catgpt-frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     restart: unless-stopped
     depends_on:
-      - backend
+      - catgpt_backend
       - postgresql
-
 
   postgresql:
     image: postgres:13-alpine

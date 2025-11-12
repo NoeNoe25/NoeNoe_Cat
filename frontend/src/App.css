@@ -12,8 +12,14 @@ body {
   color: #333;
 }
 
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 /* Header Styles */
-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -30,7 +36,7 @@ header {
   gap: 20px;
 }
 
-header h1 {
+.header h1 {
   margin: 0;
   font-size: 24px;
   color: #4a5568;
@@ -90,13 +96,14 @@ header h1 {
 }
 
 /* Messages Container */
-#messages {
+.messages-container {
   max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
+  flex: 1;
 }
 
 /* Message Styles */
@@ -137,8 +144,19 @@ header h1 {
   font-style: italic;
 }
 
-.stream-text {
+.message b {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9em;
+}
+
+.user-message b { color: #e2e8f0; }
+.gemini-message b { color: #3cba54; }
+.transcript-message b { color: #f39c12; }
+
+.message-text {
   line-height: 1.5;
+  word-wrap: break-word;
 }
 
 /* Input Container */
@@ -156,7 +174,7 @@ header h1 {
   align-items: center;
 }
 
-#input {
+.message-input {
   flex: 1;
   padding: 15px 20px;
   border: 2px solid #e2e8f0;
@@ -167,17 +185,17 @@ header h1 {
   background: white;
 }
 
-#input:focus {
+.message-input:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-#input:disabled {
+.message-input:disabled {
   background: #f7fafc;
   cursor: not-allowed;
 }
 
-#send-btn, #mic-btn {
+.send-button, .mic-button {
   padding: 15px 25px;
   border: none;
   border-radius: 12px;
@@ -188,31 +206,35 @@ header h1 {
   min-width: 80px;
 }
 
-#send-btn {
+.send-button {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
 }
 
-#send-btn:hover:not(:disabled) {
+.send-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-#send-btn:disabled {
+.send-button:disabled {
   background: #cbd5e0;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-#mic-btn {
+.mic-button {
   background: linear-gradient(135deg, #f093fb, #f5576c);
   color: white;
 }
 
-#mic-btn:hover:not(:disabled) {
+.mic-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+}
+
+.mic-button.recording {
+  background: linear-gradient(135deg, #ff4444, #cc0000);
 }
 
 /* Table View Styles */
@@ -328,31 +350,31 @@ header h1 {
 }
 
 /* Scrollbar Styling */
-#messages::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar,
 .table-content::-webkit-scrollbar {
   width: 6px;
 }
 
-#messages::-webkit-scrollbar-track,
+.messages-container::-webkit-scrollbar-track,
 .table-content::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
 
-#messages::-webkit-scrollbar-thumb,
+.messages-container::-webkit-scrollbar-thumb,
 .table-content::-webkit-scrollbar-thumb {
   background: rgba(102, 126, 234, 0.5);
   border-radius: 3px;
 }
 
-#messages::-webkit-scrollbar-thumb:hover,
+.messages-container::-webkit-scrollbar-thumb:hover,
 .table-content::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 126, 234, 0.7);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  header {
+  .header {
     flex-direction: column;
     gap: 15px;
     padding: 15px;
@@ -373,7 +395,7 @@ header h1 {
     flex-wrap: wrap;
   }
   
-  #input {
+  .message-input {
     min-width: 200px;
   }
   
@@ -412,7 +434,7 @@ header h1 {
 }
 
 @media (max-width: 480px) {
-  header h1 {
+  .header h1 {
     font-size: 20px;
   }
   
@@ -421,7 +443,7 @@ header h1 {
     font-size: 12px;
   }
   
-  #send-btn, #mic-btn {
+  .send-button, .mic-button {
     padding: 12px 18px;
     font-size: 14px;
     min-width: 60px;

@@ -1,6 +1,10 @@
+import logging
 import asyncio
 import websockets
 from vosk import Model, KaldiRecognizer
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("--VOSK--")
 
 MODEL_PATH = "models/vosk-model-small-en-us-0.15"
 model = Model(MODEL_PATH)
@@ -30,7 +34,7 @@ async def recognize(websocket):
 
 async def start_vosk_websocket():
     server = await websockets.serve(recognize, "0.0.0.0", 2700)
-    print("✅ Vosk WebSocket server started on ws://localhost:2700")
+    logger.info("✅ Vosk WebSocket server started on ws://localhost:2700")
     return server
 
 

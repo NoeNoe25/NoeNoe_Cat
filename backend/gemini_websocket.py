@@ -2,127 +2,132 @@ import asyncio
 import websockets
 import google.generativeai as genai
 import os
+import logging
 from gtts import gTTS
 import io
 import base64
-import uuid
-from datetime import datetime
-
-# --- Fix the import based on your file structure ---
-# Option A: If you have queries/chats.py
+import re
 from queries.chats import insert_chat
 
-# OR Option B: If you have routes/chats.py with the insert_chat function
-# from routes.chats import insert_chat
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("--GEMINI--")
 
-# OR Option C: Import directly from the module that has the function
-# Based on your file structure, it seems the function is in queries/chats.py
-
-# --- Gemini Setup ---
-API_KEY = os.getenv("GEMINI_API_KEY") or "YOUR_API_KEY_HERE"
+API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
 
 system_instruction = (
     "You are a student (a kid) practicing English with your teacher. "
     "You will receive sentences from your teacher. "
-    "Your role is to behave like a curious kid, respond naturally, and keep a childlike tone."
+    "Your role is to behave like a curious kid, respond naturally, "
+    "and keep a childlike tone. Use short and clear sentences."
 )
 
 MODEL_NAME = "gemini-2.5-flash-lite"
 model = genai.GenerativeModel(MODEL_NAME, system_instruction=system_instruction)
 
 
-# --- Audio Queue Worker ---
-async def audio_worker(websocket, queue: asyncio.Queue):
-    while True:
-        chunk_text, audio_filename = await queue.get()
-        try:
-            audio_fp = io.BytesIO()
-            tts = gTTS(text=chunk_text, lang="en")
-            tts.write_to_fp(audio_fp)
-            audio_bytes = audio_fp.getvalue()
-            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-            await websocket.send(f"AUDIO::{audio_b64}")
-            
-            # Save audio file if filename provided
-            if audio_filename:
-                # Make sure recordings directory exists
-                os.makedirs("/recordings", exist_ok=True)
-                audio_path = f"/recordings/{audio_filename}.mp3"
-                with open(audio_path, "wb") as f:
-                    f.write(audio_bytes)
-                    
-        except Exception as e:
-            print(f"Audio generation error: {e}")
-        queue.task_done()
+# --- Helper: Clean text for TTS ---
+def clean_text(text):
+    return re.sub(r"[^\w\s.,?!]", "", text).strip()
+
+
+# --- Helper: Process Gemini response ---
+async def process_gemini_response(websocket, message):
+    full_reply = ""
+    sentence_buffer = ""
+    tts_tasks = []
+
+    response = model.generate_content(message, stream=True)
+
+    for chunk in response:
+        if chunk.text:
+            await websocket.send(chunk.text)
+            full_reply += chunk.text + " "
+            sentence_buffer += chunk.text
+
+            # Find all full sentences ending with . or ?
+            sentences = re.findall(r"[^.?\n]*[.?]", sentence_buffer)
+            if sentences:
+                consumed = sum(len(s) for s in sentences)
+                for s in sentences:
+                    s_clean = clean_text(s.strip())
+                    if s_clean:
+                        tts_tasks.append(
+                            asyncio.create_task(send_tts(websocket, s_clean))
+                        )
+                sentence_buffer = sentence_buffer[consumed:]
+
+    # Flush any remaining text (if it ends without . or ?)
+    if sentence_buffer.strip():
+        s_clean = clean_text(sentence_buffer.strip())
+        if s_clean:
+            tts_tasks.append(asyncio.create_task(send_tts(websocket, s_clean)))
+
+    return full_reply, tts_tasks
+
+
+# --- Helper: Send TTS ---
+async def send_tts(websocket, text):
+    try:
+        audio_fp = io.BytesIO()
+        tts = gTTS(text=text, lang="en", slow=False)
+        tts.write_to_fp(audio_fp)
+        audio_bytes = audio_fp.getvalue()
+        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        await websocket.send(f"AUDIO::{audio_b64}")
+    except Exception as e:
+        logger.warning(f"TTS error: {e}")
+
+
+# --- Helper: Save chat to database ---
+async def save_chat_to_db(user_input, gemini_reply):
+    try:
+        await insert_chat(
+            user_input=user_input, gemini_reply=gemini_reply.strip(), audio_path=None
+        )
+        logger.info(f"💾 Saved chat: {user_input[:30]}")
+    except Exception as e:
+        logger.warning(f"❌ DB save error: {e}")
 
 
 # --- WebSocket Handler ---
 async def handle_client(websocket):
-    # Create a queue for sequential audio
-    audio_queue = asyncio.Queue()
-    # Start background audio worker
-    audio_task = asyncio.create_task(audio_worker(websocket, audio_queue))
-    
-    # Variables to accumulate the conversation
-    current_user_message = ""
-    full_gemini_reply = ""
-    audio_filename = None
-
     try:
         async for message in websocket:
             try:
-                # Store user message
-                current_user_message = message
-                full_gemini_reply = ""  # Reset for new response
-                audio_filename = f"audio_{uuid.uuid4().hex}"  # Generate unique filename
-                
-                # Stream Gemini response
-                response = model.generate_content(message, stream=True)
+                # Process Gemini response and generate TTS tasks
+                full_reply, tts_tasks = await process_gemini_response(
+                    websocket, message
+                )
 
-                for chunk in response:
-                    if chunk.text:
-                        # 1️⃣ Send text immediately
-                        await websocket.send(chunk.text)
-                        # 2️⃣ Accumulate full reply for database
-                        full_gemini_reply += chunk.text
-                        # 3️⃣ Enqueue audio for sequential sending
-                        await audio_queue.put((chunk.text, audio_filename))
+                # Wait for all TTS tasks to finish
+                if tts_tasks:
+                    await asyncio.gather(*tts_tasks)
 
-                # End marker
+                # Send end marker to client
                 await websocket.send("[[END]]")
-                
-                # Save conversation to database
-                try:
-                    audio_path = f"/recordings/{audio_filename}.mp3" if audio_filename else None
-                    await insert_chat(
-                        user_input=current_user_message,
-                        gemini_reply=full_gemini_reply,
-                        audio_path=audio_path
-                    )
-                    print(f"✅ Conversation saved to database: {current_user_message[:50]}...")
-                except Exception as db_error:
-                    print(f"❌ Database error: {db_error}")
+
+                # Save chat to the database
+                await save_chat_to_db(message, full_reply)
 
             except Exception as e:
+                logger.warning(f"❌ Processing error: {e}")
                 await websocket.send(f"Error: {str(e)}")
-    finally:
-        # Cleanup
-        audio_task.cancel()
-        try:
-            await audio_task
-        except asyncio.CancelledError:
-            pass
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
 
 
 # --- Start WebSocket Server ---
 async def start_gemini_websocket():
     server = await websockets.serve(handle_client, "0.0.0.0", 8765)
-    print("✅ Gemini WebSocket server started on ws://localhost:8765")
+    logger.info("✅ Gemini WebSocket server started on ws://localhost:8765")
     return server
 
 
 if __name__ == "__main__":
+
     async def main():
         await start_gemini_websocket()
         await asyncio.Future()  # Run forever
+
+    asyncio.run(main())
