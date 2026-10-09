@@ -131,9 +131,8 @@ _To add:_ a screenshot of the chat UI during a conversation, the chat-history ta
 - Add conversation difficulty levels for different learner ages
 - Run TTS offline to remove the gTTS network dependency
 
-## Authors
+## Team
 
-**Hsu Myat Noe** · [GitHub](https://github.com/NoeNoe25) · [LinkedIn](https://www.linkedin.com/in/hsu-myat-noe569aa729a/)
-
-With contributions from [HeinHtetSoe-RAI7](https://github.com/HeinHtetSoe-RAI7).
-<!-- TODO: describe each person's contribution -->
+- **Hsu Myat Noe** · [GitHub](https://github.com/NoeNoe25) · [LinkedIn](https://www.linkedin.com/in/hsu-myat-noe569aa729a/)
+- **Su Sandi Linn** · [GitHub](https://github.com/SuSandiLinn13)
+- **Hein Htet Soe** · [GitHub](https://github.com/HeinHtetSoe-RAI7)
