@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-# *.env
+.env
 .venv/
 
 # Vosk models (if large and can be downloaded separately)

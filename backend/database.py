@@ -6,11 +6,11 @@ import os
 # -------------------
 # Database connection
 # -------------------
-POSTGRES_USER = "username"
-POSTGRES_PASSWORD = "password"
-POSTGRES_DB = "catgpt"
-POSTGRES_HOST = "postgresql"  # `postgresql` service name in Docker Compose
-POSTGRES_PORT = 5432
+POSTGRES_USER = os.getenv("POSTGRES_USER", "username")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "catgpt")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgresql")  # `postgresql` service name in Docker Compose
+POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 
 DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
